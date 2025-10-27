@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <link rel="icon" type="image/png" href="assets/profile.png" />
+        <title>Dear Lily</title>
+        <style>
+            :root {
+                --bg: #000000;
+                --fg: #ff69b4;
+            }
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+                /* Background will be handled by particles.js, ensure body is transparent */
+                background: transparent;
+                color: var(--fg);
+                font-family:
+                    "Brush Script MT",
+                    cursive,
+                    system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    Roboto,
+                    "Helvetica Neue",
+                    Arial;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                overflow: hidden;
+                cursor: grab; /* Default cursor */
+            }
+            html:active,
+            body:active {
+                cursor: grabbing; /* Cursor when dragging */
+            }
+
+            /* Container for particles.js */
+            #particles-js {
+                position: fixed; /* Fixed position to cover the entire viewport */
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: var(
+                    --bg
+                ); /* This will be the actual background color */
+                background-image: url(""); /* No background image for particles */
+                background-repeat: no-repeat;
+                background-size: cover;
+                background-position: 50% 50%;
+                z-index: -2; /* Ensure particles are in the very background */
+            }
+
+            .stage {
+                perspective: 1200px;
+                height: 100vh;
+                width: 100%; /* Corrected width */
+                position: relative;
+                overflow: hidden;
+                background: transparent; /* Make stage background transparent to show particles */
+                z-index: -1; /* Ensure stage content is above particles but below intro */
+            }
+
+            .world {
+                transform-style: preserve-3d;
+                height: 100%;
+                width: 100%;
+                /* Slower, smoother transition for tension when releasing drag */
+                transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+                position: relative;
+                z-index: 0; /* Ensure world content is above particles */
+            }
+
+            .line {
+                position: absolute;
+                top: 0;
+                left: 0;
+                line-height: 1.2;
+                opacity: 0.9;
+                text-align: center;
+                will-change: transform, opacity;
+                color: var(--fg);
+                letter-spacing: 0.02em;
+                user-select: none;
+                white-space: nowrap;
+                text-shadow: 0 0 8px var(--fg); /* Glow effect */
+                /* Transform property will be set entirely by JavaScript for animation */
+            }
+
+            .hint {
+                position: absolute;
+                left: 1rem;
+                bottom: 1rem;
+                font-size: 12px;
+                opacity: 0.5;
+                color: #fff;
+                z-index: 101; /* Ensure hint is on top of everything */
+            }
+
+            /* Intro Overlay styles */
+            #intro-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(
+                    0,
+                    0,
+                    0,
+                    0.8
+                ); /* Semi-transparent black overlay */
+                backdrop-filter: blur(10px); /* Blurred background */
+                -webkit-backdrop-filter: blur(10px); /* For Safari */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 100; /* On top of everything initially */
+                opacity: 1;
+                transition: opacity 1s ease-out; /* Fade out effect */
+            }
+
+            #intro-overlay.fade-out {
+                opacity: 0;
+                pointer-events: none; /* Disable interaction after fading */
+            }
+
+            #lorem-overlay {
+                font-family:;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 102;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 1s ease-out;
+            }
+
+            #lorem-overlay.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #lorem-text-content {
+                font-size: clamp(1rem, 2vw, 2rem);
+                color: #ffffff;
+                text-shadow: 0 0 15px #fff;
+                user-select: none;
+                text-align: center;
+                max-width: 80%;
+            }
+
+            #intro-text {
+                font-size: clamp(1rem, 2vw, 2rem); /* Responsive font size */
+                color: #ffffff;
+                text-shadow: 0 0 15px #fff; /* White glow for intro text */
+                cursor: pointer;
+                user-select: none;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="lorem-overlay">
+            <div id="lorem-text-content">
+                hey sweetie,<br />
+                i just wanted to say i’m really glad you exist.<br />
+                And all i wanted to say is that i like you. like... actually
+                like you.<br />
+                been trying to play it cool but it’s been you on my mind more
+                than i planned.<br />
+                So here i am making this website and revealing the feelings i
+                catched for you and telling u <br />
+                I LOVE YOU
+            </div>
+        </div>
+        <audio
+            id="background-music"
+            src="assets/SpotiDownloader.com - blue - yung kai.mp3"
+            loop
+            style="display: none"
+        ></audio>
+
+        <div id="particles-js"></div>
+        <div id="intro-overlay">
+            <div id="intro-text">
+                u were not waiting for nothing:)<br />Click and drag
+            </div>
+        </div>
+
+        <div class="stage">
+            <div class="world" id="world"></div>
+            <div class="hint" style="display: none">click and drag to tilt</div>
+        </div>
+
+        <script src="particles.min.js"></script>
+        <script>
+            // --- particles.js initialization ---
+            particlesJS("particles-js", {
+                particles: {
+                    number: {
+                        value: 300, // Even more particles for a denser star field
+                        density: {
+                            enable: true,
+                            value_area: 1200, // Further adjust density area
+                        },
+                    },
+                    color: {
+                        value: "#ffffff", // White particles
+                    },
+                    shape: {
+                        type: "circle", // Circular particles
+                        stroke: {
+                            width: 0,
+                            color: "#ffffff",
+                        },
+                        polygon: {
+                            nb_sides: 5,
+                        },
+                    },
+                    opacity: {
+                        value: 0.6, // Base opacity
+                        random: true, // Random opacity for a twinkling effect
+                        anim: {
+                            enable: true,
+                            speed: 0.3, // Even slower twinkling speed
+                            opacity_min: 0.05, // Wider opacity range for better twinkle
+                            sync: false,
+                        },
+                    },
+                    size: {
+                        value: 1.2, // Even smaller particle size for more star-like appearance
+                        random: true, // Random size for varied star sizes
+                        anim: {
+                            enable: false, // No size animation by itself
+                            speed: 40,
+                            size_min: 0.1,
+                            sync: false,
+                        },
+                    },
+                    line_linked: {
+                        enable: false, // No lines between particles for a star field
+                    },
+                    move: {
+                        enable: true,
+                        speed: 0.1, // Very, very slow movement for a gentle drift
+                        direction: "none", // No specific direction
+                        random: true,
+                        straight: false,
+                        out_mode: "out", // Particles disappear and reappear
+                        bounce: false,
+                        attract: {
+                            enable: false,
+                            rotateX: 600,
+                            rotateY: 1200,
+                        },
+                    },
+                },
+                interactivity: {
+                    detect_on: "canvas",
+                    events: {
+                        onhover: {
+                            enable: false, // No hover effects
+                        },
+                        onclick: {
+                            enable: false, // No click effects
+                        },
+                        resize: true,
+                    },
+                },
+                retina_detect: true,
+            });
+            // --- End particles.js initialization ---
+
+            const world = document.getElementById("world");
+            const audio = document.getElementById("background-music");
+            const mainHint = document.querySelector(".hint"); // Renamed to avoid conflict
+            const introOverlay = document.getElementById("intro-overlay");
+
+            // --- NEW CODE START ---
+            // Get the lorem overlay element
+            const loremOverlay = document.getElementById("lorem-overlay");
+
+            // Add keydown event listener to the window
+            window.addEventListener("keydown", (event) => {
+                // Check if the pressed key is 'z' (case-insensitive)
+                if (event.key.toLowerCase() === "z") {
+                    // Toggle the 'visible' class on the overlay
+                    loremOverlay.classList.toggle("visible");
+                }
+            });
+            // --- NEW CODE END ---
+
+            const sentences = [
+                "happy birthday",
+                "all i wish is you",
+                "i told u u have my heart",
+                "ure shinning like the moon",
+                "i love u sweetie",
+                "happy birthday my love",
+                "you like the moon",
+                "all i wish is yall i wish is you",
+                "hday my love",
+                "my love",
+            ];
+            const hearts = ["💖", "💗", "💘", "💓", "💝", "💞"];
+
+            const maxLines = 100; // Number of lines to keep on screen
+            let lines = [];
+
+            function getRandomContent() {
+                const isHeart = Math.random() < 0.15; // 15% chance for a heart
+                return isHeart
+                    ? hearts[Math.floor(Math.random() * hearts.length)]
+                    : sentences[Math.floor(Math.random() * sentences.length)];
+            }
+
+            function createLine(initial = false) {
+                const line = document.createElement("div");
+                line.classList.add("line");
+                line.textContent = getRandomContent();
+
+                // Store current positions directly on the element object for tracking
+                line.currentX = Math.random() * 100; // Initial X position (0-100vw)
+                line.currentY = initial
+                    ? Math.random() * 100 // Initial lines spread across 100vh
+                    : 100 + Math.random() * 50; // New lines appear from below the screen (100vh to 150vh)
+
+                // Random font size (smaller range for better spread)
+                line.style.fontSize = `${Math.random() * 1.5 + 1}vw`; // 1vw to 2.5vw
+
+                // Store depth for parallax effect (0 to 1)
+                line.dataset.depth = Math.random();
+
+                // Store horizontal drift properties
+                line.driftDirection = Math.random() < 0.5 ? 1 : -1; // Random left/right drift direction
+                line.driftSpeed = Math.random() * 0.02 + 0.005; // Slower drift speed
+
+                // Assign a random scroll speed to each line for upward spreading effect
+                line.scrollSpeed = 0.1 + Math.random() * 0.1; // Speed range from 0.1 to 0.2
+
+                world.appendChild(line);
+                lines.push(line);
+            }
+
+            // Initial population of lines
+            for (let i = 0; i < maxLines; i++) {
+                createLine(true); // Create initial lines spread across the screen
+            }
+
+            // --- Animation Loop ---
+            function animateLines() {
+                lines.forEach((line) => {
+                    // Update vertical position for upward scrolling
+                    line.currentY -= line.scrollSpeed;
+
+                    // Update horizontal position for drifting
+                    line.currentX += line.driftDirection * line.driftSpeed;
+
+                    // Wrap horizontal position if it goes off-screen
+                    if (line.currentX > 120) line.currentX = -20; // Reappear from left (with buffer)
+                    if (line.currentX < -20) line.currentX = 120; // Reappear from right (with buffer)
+
+                    // Recycle the line if it has scrolled off the top of the screen
+                    if (line.currentY < -10) {
+                        // Off screen top threshold
+                        line.currentY = 100 + Math.random() * 50; // Reappear from bottom (100vh to 150vh)
+                        line.currentX = Math.random() * 100; // New random horizontal position
+                        line.style.fontSize = `${Math.random() * 1.5 + 1}vw`; // New random font size
+                        line.textContent = getRandomContent(); // New content
+                        line.dataset.depth = Math.random(); // New random depth
+                        line.driftDirection = Math.random() < 0.5 ? 1 : -1; // New random drift direction
+                        line.driftSpeed = Math.random() * 0.02 + 0.005; // New random drift speed
+                        line.scrollSpeed = 0.1 + Math.random() * 0.1; // New random scroll speed
+                    }
+
+                    // Apply 3D effects (translate, scale, opacity) without rotation
+                    const depthFactor = parseFloat(line.dataset.depth);
+                    const scale = 1 + (1 - depthFactor) * 0.2;
+                    const opacity = 0.6 + 0.4 * (1 - depthFactor);
+                    const z = (depthFactor - 0.5) * 300;
+
+                    // Consolidate all transforms into one property for smooth animation
+                    line.style.transform = `translateX(${line.currentX}vw) translateY(${line.currentY}vh) translateZ(${z}px) scale(${scale})`;
+                    line.style.opacity = opacity;
+                });
+
+                // Animate tension and ease-out for world tilt
+                if (!isDragging) {
+                    targetTiltX *= 0.95; // Gently ease target back to center when not dragging
+                    targetTiltY *= 0.95;
+                }
+                currentTiltX += (targetTiltX - currentTiltX) * 0.1; // Smoothly interpolate current tilt to target tilt
+                currentTiltY += (targetTiltY - currentTiltY) * 0.1;
+                world.style.transform = `rotateX(${currentTiltX}deg) rotateY(${currentTiltY}deg)`;
+
+                requestAnimationFrame(animateLines);
+            }
+
+            // --- Interactive Tilt Logic ---
+            let isDragging = false;
+            let targetTiltX = 0,
+                targetTiltY = 0; // The tilt angle we are aiming for
+            let currentTiltX = 0,
+                currentTiltY = 0; // The actual, smoothed tilt angle
+
+            function handleDrag(x, y) {
+                // Calculate target tilt based on mouse/touch position
+                // Multiply by a larger factor (e.g., 60) for more intense angle response
+                targetTiltY = (x / window.innerWidth - 0.5) * 60;
+                targetTiltX = -(y / window.innerHeight - 0.5) * 60;
+            }
+
+            // --- Audio Playback on First Interaction ---
+            function startExperience() {
+                audio
+                    .play()
+                    .catch((error) =>
+                        console.error("Audio could not play:", error),
+                    );
+                mainHint.style.display = "block"; // Show the main hint
+                introOverlay.classList.add("fade-out"); // Start fade out animation
+                introOverlay.addEventListener(
+                    "transitionend",
+                    () => {
+                        introOverlay.style.display = "none"; // Hide completely after fade
+                    },
+                    { once: true },
+                );
+            }
+
+            // Listen for the first interaction on the intro overlay to start audio and update hint
+            introOverlay.addEventListener("mousedown", startExperience, {
+                once: true,
+            });
+            introOverlay.addEventListener("touchstart", startExperience, {
+                once: true,
+            });
+
+            // --- Mouse Event Listeners for Click-and-Drag Tilt ---
+            window.addEventListener("mousedown", (e) => {
+                isDragging = true;
+                handleDrag(e.clientX, e.clientY);
+            });
+            window.addEventListener("mouseup", () => {
+                isDragging = false;
+            });
+            window.addEventListener("mousemove", (e) => {
+                if (isDragging) {
+                    handleDrag(e.clientX, e.clientY);
+                }
+            });
+            window.addEventListener("mouseleave", () => {
+                isDragging = false;
+            });
+
+            // --- Touch Event Listeners for Drag Tilt ---
+            window.addEventListener("touchstart", (e) => {
+                isDragging = true;
+                const touch = e.touches[0];
+                handleDrag(touch.clientX, touch.clientY);
+            });
+            window.addEventListener("touchend", () => {
+                isDragging = false;
+            });
+            window.addEventListener(
+                "touchmove",
+                (e) => {
+                    if (isDragging) {
+                        // Prevent default touch behavior (like scrolling) to ensure tilt responsiveness
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        handleDrag(touch.clientX, touch.clientY);
+                    }
+                },
+                { passive: false },
+            ); // Use passive: false for e.preventDefault() to work
+
+            // Start the main animation loop
+            animateLines();
+        </script>
+    </body>
+</html>
