@@ -168,6 +168,11 @@
                 user-select: none;
                 text-align: center;
             }
+            @media (max-width: 768px) {
+                #intro-text {
+                    font-size: 2rem;
+                }
+            }
         </style>
     </head>
     <body>
@@ -299,6 +304,17 @@
                     loremOverlay.classList.toggle("visible");
                 }
             });
+
+            function isMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+                    navigator.userAgent,
+                );
+            }
+            if (isMobile()) {
+                setTimeout(() => {
+                    loremOverlay.classList.add("visible");
+                }, 30000);
+            }
             // --- NEW CODE END ---
 
             const sentences = [
